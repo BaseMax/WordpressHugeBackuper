@@ -93,9 +93,7 @@ This repository (**Wordpress-Huge-Backuper**) is specially designed for **huge s
 ## 🧠 Author
 
 **Max Base**
-
 📎 [GitHub Profile](https://github.com/BaseMax)
-
 🌐 [Repository](https://github.com/BaseMax/WordpressHugeBackuper)
 
 ## 📝 License
