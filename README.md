@@ -54,6 +54,13 @@ sudo apt install zip findutils
 | `-n`   | Dry-run mode (show actions only)    |
 | `-h`   | Show help message                   |
 
+### Try
+
+```bash
+wget https://raw.githubusercontent.com/BaseMax/WordpressHugeBackuper/refs/heads/main/wordpress-huge-backuper.sh
+bash wordpress-huge-backuper.sh -v
+```
+
 ### Example
 
 ```bash
