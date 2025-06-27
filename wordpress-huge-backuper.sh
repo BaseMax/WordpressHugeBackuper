@@ -83,7 +83,7 @@ zip_files_in_batches() {
 
   log "📂 Creating batched zip files from $target_dir with max size $MAX_SIZE bytes each..."
 
-  mapfile -t files_with_sizes < <(find . -type f ! -name 'zi??????' ! -name '*.tmp' ! -name '*.temp' -printf '%s %p\n' | sort -k2)
+  mapfile -t files_with_sizes < <(find . -type f ! -name '*.tmp' ! -name '*.temp' -printf '%s %p\n' | sort -k2)
 
   local batch_files=()
   local batch_size=0
