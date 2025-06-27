@@ -12,7 +12,7 @@ set -euo pipefail
 ROOT="$(pwd)"
 WP_CONTENT_DIR="$ROOT/wp-content"
 UPLOADS_DIR="$WP_CONTENT_DIR/uploads"
-LOG_FILE="$ROOT/zip_process.log"
+LOG_FILE="$ROOT/wordpress-huge-backuper.log"
 ZIP_OPTIONS="-r"
 
 MAX_SIZE=$((1 * 1024 * 1024 * 1024))  # 1 GB in bytes
