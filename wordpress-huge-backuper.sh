@@ -56,6 +56,69 @@ parse_args() {
   done
 }
 
+# Batch zip files in groups not exceeding MAX_SIZE, creating multiple zip files.
+# Params:
+#   $1 = output zip base path (without .zip)
+#   $2 = directory to find files in (relative or absolute)
+zip_files_in_batches() {
+  local zip_base="$1"
+  local target_dir="$2"
+
+  pushd "$target_dir" > /dev/null || { log "❌ Could not enter directory $target_dir"; exit 1; }
+
+  log "📂 Creating batched zip files from $target_dir with max size $MAX_SIZE bytes each..."
+
+  mapfile -t files_with_sizes < <(find . -type f -printf '%s %p\n' | sort -k2)
+
+  local batch_files=()
+  local batch_size=0
+  local batch_index=1
+
+  for entry in "${files_with_sizes[@]}"; do
+    local size=${entry%% *}
+    local file=${entry#* }
+
+    if (( size > MAX_SIZE )); then
+      log "⚠️ File $file size ($size) exceeds max batch size; zipping individually..."
+      if (( DRY_RUN )); then
+        log "[Dry-run] zip -r ${zip_base}_part${batch_index}.zip \"$file\""
+      else
+        zip -r "${zip_base}_part${batch_index}.zip" "$file" >> "$LOG_FILE" 2>&1
+      fi
+      ((batch_index++))
+      continue
+    fi
+
+    if (( batch_size + size > MAX_SIZE )); then
+      if (( ${#batch_files[@]} > 0 )); then
+        log "🗂 Creating zip ${zip_base}_part${batch_index}.zip with ${#batch_files[@]} files, total size $batch_size bytes"
+        if (( DRY_RUN )); then
+          log "[Dry-run] zip -r ${zip_base}_part${batch_index}.zip ${batch_files[*]}"
+        else
+          zip -r "${zip_base}_part${batch_index}.zip" "${batch_files[@]}" >> "$LOG_FILE" 2>&1
+        fi
+        ((batch_index++))
+      fi
+      batch_files=()
+      batch_size=0
+    fi
+
+    batch_files+=("$file")
+    ((batch_size += size))
+  done
+
+  if (( ${#batch_files[@]} > 0 )); then
+    log "🗂 Creating final zip ${zip_base}_part${batch_index}.zip with ${#batch_files[@]} files, total size $batch_size bytes"
+    if (( DRY_RUN )); then
+      log "[Dry-run] zip -r ${zip_base}_part${batch_index}.zip ${batch_files[*]}"
+    else
+      zip -r "${zip_base}_part${batch_index}.zip" "${batch_files[@]}" >> "$LOG_FILE" 2>&1
+    fi
+  fi
+
+  popd > /dev/null || exit 1
+}
+
 zip_folder() {
   local zip_name="$1"
   local target="$2"
@@ -92,13 +155,15 @@ create_root_zip() {
 
 create_wp_content_zip() {
   if [ -d "$WP_CONTENT_DIR" ]; then
-    log "🔄 Creating wp-content.zip..."
+    log "🔄 Creating wp-content.zip (excluding uploads)..."
     pushd "$WP_CONTENT_DIR" > /dev/null
+
     if (( DRY_RUN )); then
       log "[Dry-run] zip $ZIP_OPTIONS \"$ROOT/wp-content.zip\" . -x 'uploads/*' 'uploads'"
     else
       zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x 'uploads/*' 'uploads' >> "$LOG_FILE" 2>&1
     fi
+
     popd > /dev/null
   else
     log "⚠️  wp-content directory not found, skipping wp-content.zip"
@@ -111,58 +176,7 @@ process_uploads_split_zip() {
     exit 1
   fi
 
-  log "📂 Processing uploads directory with size limit ${MAX_SIZE} bytes per zip..."
-  pushd "$UPLOADS_DIR" > /dev/null || exit 1
-
-  mapfile -t files_with_sizes < <(find . -type f -printf '%s %p\n' | sort -k2)
-
-  batch_files=()
-  batch_size=0
-  batch_index=1
-
-  for entry in "${files_with_sizes[@]}"; do
-    size=${entry%% *}
-    file=${entry#* }
-
-    if (( size > MAX_SIZE )); then
-      log "⚠️ File $file size ($size) exceeds max batch size; zipping individually..."
-      if (( DRY_RUN )); then
-        log "[Dry-run] zip -r $ROOT/uploads_part${batch_index}.zip \"$file\""
-      else
-        zip -r "$ROOT/uploads_part${batch_index}.zip" "$file" >> "$LOG_FILE" 2>&1
-      fi
-      ((batch_index++))
-      continue
-    fi
-
-    if (( batch_size + size > MAX_SIZE )); then
-      if (( ${#batch_files[@]} > 0 )); then
-        log "🗂 Creating zip uploads_part${batch_index}.zip with ${#batch_files[@]} files, total size $batch_size bytes"
-        if (( DRY_RUN )); then
-          log "[Dry-run] zip -r $ROOT/uploads_part${batch_index}.zip ${batch_files[*]}"
-        else
-          zip -r "$ROOT/uploads_part${batch_index}.zip" "${batch_files[@]}" >> "$LOG_FILE" 2>&1
-        fi
-        ((batch_index++))
-      fi
-      batch_files=()
-      batch_size=0
-    fi
-
-    batch_files+=("$file")
-    ((batch_size += size))
-  done
-
-  if (( ${#batch_files[@]} > 0 )); then
-    log "🗂 Creating final zip uploads_part${batch_index}.zip with ${#batch_files[@]} files, total size $batch_size bytes"
-    if (( DRY_RUN )); then
-      log "[Dry-run] zip -r $ROOT/uploads_part${batch_index}.zip ${batch_files[*]}"
-    else
-      zip -r "$ROOT/uploads_part${batch_index}.zip" "${batch_files[@]}" >> "$LOG_FILE" 2>&1
-    fi
-  fi
-
-  popd > /dev/null || exit 1
+  zip_files_in_batches "$ROOT/uploads" "$UPLOADS_DIR"
 }
 
 # === Main ===
@@ -175,6 +189,6 @@ log "-------------------------------"
 
 create_root_zip
 create_wp_content_zip
-process_uploads
+process_uploads_split_zip
 
 log "✅ All zip files created successfully in: $ROOT"
