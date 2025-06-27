@@ -28,6 +28,25 @@ log() {
   fi
 }
 
+run_zip() {
+  # Args: 1=zip_file, 2...=files to zip
+  local zip_path="$1"
+  shift
+  local files=("$@")
+
+  log "📝 Running zip command: zip $ZIP_OPTIONS \"$zip_path\" ${files[*]}"
+
+  if (( DRY_RUN )); then
+    log "[Dry-run] zip $ZIP_OPTIONS \"$zip_path\" ${files[*]}"
+  else
+    if (( VERBOSE )); then
+      zip $ZIP_OPTIONS "$zip_path" "${files[@]}" 2>&1 | tee -a "$LOG_FILE"
+    else
+      zip $ZIP_OPTIONS "$zip_path" "${files[@]}" >> "$LOG_FILE" 2>&1
+    fi
+  fi
+}
+
 check_dependencies() {
   command -v zip >/dev/null 2>&1 || { echo "❌ zip command not found. Please install zip."; exit 1; }
   command -v find >/dev/null 2>&1 || { echo "❌ find command not found. Please install find."; exit 1; }
@@ -56,10 +75,6 @@ parse_args() {
   done
 }
 
-# Batch zip files in groups not exceeding MAX_SIZE, creating multiple zip files.
-# Params:
-#   $1 = output zip base path (without .zip)
-#   $2 = directory to find files in (relative or absolute)
 zip_files_in_batches() {
   local zip_base="$1"
   local target_dir="$2"
@@ -80,11 +95,7 @@ zip_files_in_batches() {
 
     if (( size > MAX_SIZE )); then
       log "⚠️ File $file size ($size) exceeds max batch size; zipping individually..."
-      if (( DRY_RUN )); then
-        log "[Dry-run] zip -r ${zip_base}_part${batch_index}.zip \"$file\""
-      else
-        zip -r "${zip_base}_part${batch_index}.zip" "$file" >> "$LOG_FILE" 2>&1
-      fi
+      run_zip "${zip_base}_part${batch_index}.zip" "$file"
       ((batch_index++))
       continue
     fi
@@ -92,11 +103,7 @@ zip_files_in_batches() {
     if (( batch_size + size > MAX_SIZE )); then
       if (( ${#batch_files[@]} > 0 )); then
         log "🗂 Creating zip ${zip_base}_part${batch_index}.zip with ${#batch_files[@]} files, total size $batch_size bytes"
-        if (( DRY_RUN )); then
-          log "[Dry-run] zip -r ${zip_base}_part${batch_index}.zip ${batch_files[*]}"
-        else
-          zip -r "${zip_base}_part${batch_index}.zip" "${batch_files[@]}" >> "$LOG_FILE" 2>&1
-        fi
+        run_zip "${zip_base}_part${batch_index}.zip" "${batch_files[@]}"
         ((batch_index++))
       fi
       batch_files=()
@@ -109,11 +116,7 @@ zip_files_in_batches() {
 
   if (( ${#batch_files[@]} > 0 )); then
     log "🗂 Creating final zip ${zip_base}_part${batch_index}.zip with ${#batch_files[@]} files, total size $batch_size bytes"
-    if (( DRY_RUN )); then
-      log "[Dry-run] zip -r ${zip_base}_part${batch_index}.zip ${batch_files[*]}"
-    else
-      zip -r "${zip_base}_part${batch_index}.zip" "${batch_files[@]}" >> "$LOG_FILE" 2>&1
-    fi
+    run_zip "${zip_base}_part${batch_index}.zip" "${batch_files[@]}"
   fi
 
   popd > /dev/null || exit 1
@@ -131,11 +134,7 @@ zip_folder() {
 
   log "📝 Creating $zip_name.zip for $target..."
 
-  if (( DRY_RUN )); then
-    log "[Dry-run] zip $ZIP_OPTIONS \"$zip_path\" \"$target\""
-  else
-    zip $ZIP_OPTIONS "$zip_path" "$target" >> "$LOG_FILE" 2>&1
-  fi
+  run_zip "$zip_path" "$target"
 }
 
 create_root_zip() {
@@ -146,10 +145,15 @@ create_root_zip() {
   done
 
   log "🔄 Creating root.zip..."
+
   if (( DRY_RUN )); then
     log "[Dry-run] zip $ZIP_OPTIONS \"$ROOT/root.zip\" . ${exclude_args[*]}"
   else
-    zip $ZIP_OPTIONS "$ROOT/root.zip" . "${exclude_args[@]}" >> "$LOG_FILE" 2>&1
+    if (( VERBOSE )); then
+      zip $ZIP_OPTIONS "$ROOT/root.zip" . "${exclude_args[@]}" 2>&1 | tee -a "$LOG_FILE"
+    else
+      zip $ZIP_OPTIONS "$ROOT/root.zip" . "${exclude_args[@]}" >> "$LOG_FILE" 2>&1
+    fi
   fi
 }
 
@@ -161,7 +165,11 @@ create_wp_content_zip() {
     if (( DRY_RUN )); then
       log "[Dry-run] zip $ZIP_OPTIONS \"$ROOT/wp-content.zip\" . -x 'uploads/*' 'uploads'"
     else
-      zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x 'uploads/*' 'uploads' >> "$LOG_FILE" 2>&1
+      if (( VERBOSE )); then
+        zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x 'uploads/*' 'uploads' 2>&1 | tee -a "$LOG_FILE"
+      else
+        zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x 'uploads/*' 'uploads' >> "$LOG_FILE" 2>&1
+      fi
     fi
 
     popd > /dev/null
