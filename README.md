@@ -19,14 +19,12 @@ A powerful Bash script to create intelligent, efficient, and size-aware backups 
 ## 📦 Output Example
 
 ```
-
 wordpress-huge-backuper.log
 root.zip
 wp-content.zip
-uploads\_part1.zip
-uploads\_part2.zip
+uploads_part1.zip
+uploads_part2.zip
 ...
-
 ````
 
 ## 🛠️ Requirements
@@ -95,7 +93,9 @@ This repository (**Wordpress-Huge-Backuper**) is specially designed for **huge s
 ## 🧠 Author
 
 **Max Base**
+
 📎 [GitHub Profile](https://github.com/BaseMax)
+
 🌐 [Repository](https://github.com/BaseMax/WordpressHugeBackuper)
 
 ## 📝 License
