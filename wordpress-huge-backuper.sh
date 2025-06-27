@@ -163,12 +163,12 @@ create_wp_content_zip() {
     pushd "$WP_CONTENT_DIR" > /dev/null
 
     if (( DRY_RUN )); then
-      log "[Dry-run] zip $ZIP_OPTIONS \"$ROOT/wp-content.zip\" . -x 'uploads/*' 'uploads'"
+      log "[Dry-run] zip $ZIP_OPTIONS \"$ROOT/wp-content.zip\" . -x '$UPLOADS_DIR/*' 'uploads'"
     else
       if (( VERBOSE )); then
-        zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x 'uploads/*' 'uploads' 2>&1 | tee -a "$LOG_FILE"
+        zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x '$UPLOADS_DIR/*' '$UPLOADS_DIR' 2>&1 | tee -a "$LOG_FILE"
       else
-        zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x 'uploads/*' 'uploads' >> "$LOG_FILE" 2>&1
+        zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x '$UPLOADS_DIR/*' '$UPLOADS_DIR' >> "$LOG_FILE" 2>&1
       fi
     fi
 
