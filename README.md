@@ -113,7 +113,7 @@ If you have questions or suggestions, open an issue or contact [Max Base](https:
 
 ## License
 
-MIT License — see the [LICENSE](LICENSE) file for details.
+MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Author
 
