@@ -138,7 +138,7 @@ zip_folder() {
 }
 
 create_root_zip() {
-  local exclude_patterns=('*.zip' '*.tar.gz' '*.rar' '*.sql' '*.gz' "${WP_CONTENT_DIR}/*" "${WP_CONTENT_DIR}")
+  local exclude_patterns=('*.zip' '*.tar.gz' '*.rar' '*.sql' '*.gz' 'wp-content/*' 'wp-content' "${WP_CONTENT_DIR}/*" "${WP_CONTENT_DIR}")
   local exclude_args=()
   for pat in "${exclude_patterns[@]}"; do
     exclude_args+=("-x" "$pat")
@@ -163,12 +163,12 @@ create_wp_content_zip() {
     pushd "$WP_CONTENT_DIR" > /dev/null
 
     if (( DRY_RUN )); then
-      log "[Dry-run] zip $ZIP_OPTIONS \"$ROOT/wp-content.zip\" . -x '$UPLOADS_DIR/*' 'uploads'"
+      log "[Dry-run] zip $ZIP_OPTIONS \"$ROOT/wp-content.zip\" . -x 'uploads/*' 'uploads' "$UPLOADS_DIR/*" "$UPLOADS_DIR""
     else
       if (( VERBOSE )); then
-        zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x '$UPLOADS_DIR/*' '$UPLOADS_DIR' 2>&1 | tee -a "$LOG_FILE"
+        zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x "$UPLOADS_DIR/*" "$UPLOADS_DIR" 2>&1 | tee -a "$LOG_FILE"
       else
-        zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x '$UPLOADS_DIR/*' '$UPLOADS_DIR' >> "$LOG_FILE" 2>&1
+        zip $ZIP_OPTIONS "$ROOT/wp-content.zip" . -x "$UPLOADS_DIR/*" "$UPLOADS_DIR" >> "$LOG_FILE" 2>&1
       fi
     fi
 
